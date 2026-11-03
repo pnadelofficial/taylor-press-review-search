@@ -21,6 +21,7 @@ else:
     num_results_per_page = st.number_input("How many results to see per page", value=10)
 
     results, scores = retriever.retrieve(query_tokens, k=num_results)
+    scaled_scores = (scores - np.min(scores))/(np.max(scores) - np.min(scores))
     actual_num_results = np.count_nonzero(scores)
     total_pages = actual_num_results//num_results_per_page
 
@@ -32,7 +33,7 @@ else:
 
     st.write(f"Found **{actual_num_results}** results.")
     for i in range(num_results_per_page):
-        doc, score = results[0, start_idx+i], scores[0, start_idx+i]
+        doc, score = results[0, start_idx+i], scaled_scores[0, start_idx+i]
         if score > 0:
             row_data = U.lookup_by_index(df, doc["id"])
             title = row_data['Title']
