@@ -22,7 +22,7 @@ else:
 
     results, scores = retriever.retrieve(query_tokens, k=num_results)
     scaled_scores = (scores - np.min(scores))/(np.max(scores) - np.min(scores))
-    actual_num_results = np.count_nonzero(scores)
+    actual_num_results = np.count_nonzero(scaled_scores)
     total_pages = actual_num_results//num_results_per_page
 
     with st.container():
