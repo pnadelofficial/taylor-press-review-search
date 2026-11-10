@@ -11,6 +11,12 @@ retriever = U.load_index()
 df = U.load_data()
 stemmer = Stemmer.Stemmer("english")
 
+if "expand_all" not in st.session_state:
+    st.session_state.expand_all = False
+
+def toggle_expand():
+    st.session_state.expand_all = not st.session_state.expand_all
+
 query = st.text_input("Input a query")
 if not query.strip():
     st.warning("Please input a query to get started.")
@@ -19,6 +25,7 @@ else:
     query_tokens = bm25s.tokenize(query, stemmer=stemmer)
     num_results = st.number_input("Maximum results to see", value=1000)
     num_results_per_page = st.number_input("How many results to see per page", value=10)
+    sort_by = st.selectbox("Sort by relevance or date", ["Relevance", "Date"])
 
     results, scores = retriever.retrieve(query_tokens, k=num_results)
     scaled_scores = (scores - np.min(scores))/(np.max(scores) - np.min(scores))
@@ -31,7 +38,15 @@ else:
     start_idx = (page - 1) * num_results_per_page
     end_idx = start_idx + num_results_per_page
 
+    if sort_by == "Date":
+        results = U.reorder_by_date(results, df)
+
     st.write(f"Found **{actual_num_results}** results.")
+    st.button(
+        "Collapse All" if st.session_state.expand_all else "Expand All",
+        on_click=toggle_expand,
+        key=f"toggle_{start_idx}"
+    )
     for i in range(num_results_per_page):
         doc, score = results[0, start_idx+i], scaled_scores[0, start_idx+i]
         if score > 0:
@@ -43,6 +58,7 @@ else:
             source = row_data["Source"]
             np_type = row_data["newspaper_type"]
             text = row_data["chunks"]
-            with st.expander(f"{title} (Relevance score: {score :.3f})"):
+            expander_line = f"{title} (Relevance score: {score :.3f})" if sort_by == "Relevance" else f"{title} (Date: {date.strftime("%B %d, %Y")})"
+            with st.expander(expander_line, expanded=st.session_state.expand_all):
                 st.write(f"By {author} on {date.strftime("%B %d, %Y")} from **{newspaper}**")
                 st.html(f"<p>{U.highlight(text, terms)}</p>")
